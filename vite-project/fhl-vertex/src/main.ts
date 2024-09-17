@@ -1,5 +1,6 @@
 import * as go from "gojs";
 import { VertexLinkingTool } from "./linkingTool";
+import { level } from "../levelData/1";
 
 // You can specify options in the Diagram's second argument
 // These options not only include Diagram properties, but sub-properties, too.
@@ -9,8 +10,44 @@ const myDiagram = new go.Diagram("app", {
   "toolManager.mouseWheelBehavior": go.WheelMode.Zoom,
 });
 
-const validateLink = (fromNode: go.Node, toNode: go.Node) => {
-  console.log("find common parent between", fromNode, toNode);
+const { palette, shapes, vertices } = level;
+
+var tool = new VertexLinkingTool(validateLink);
+myDiagram.toolManager.linkingTool = tool;
+
+myDiagram.nodeTemplate = new go.Node("Spot", { locationSpot: go.Spot.Center })
+  .bindTwoWay("location", "loc", go.Point.parse, go.Point.stringify)
+  .add(
+    new go.Shape("Circle", {
+      width: 40,
+      height: 40,
+      portId: "",
+      fill: "lightgrey",
+      cursor: "pointer",
+      fromLinkable: true,
+      toLinkable: true,
+    }),
+    new go.TextBlock().bind("text")
+  );
+
+myDiagram.linkTemplate = new go.Link()
+  .bindTwoWay("points", "points")
+  .add(new go.Shape({ strokeWidth: 1.5 }));
+
+myDiagram.allowMove = false;
+
+const transformedVertices = Object.entries(vertices).map(([key, value]) => ({
+  key: key,
+  partOfShapes: value.shapes,
+  text: value.shapes.length + 1 + "",
+  loc: value.coordinates.join(" "),
+}));
+
+console.log("transformedVertices", transformedVertices);
+
+myDiagram.model = new go.GraphLinksModel(transformedVertices);
+
+function validateLink(fromNode: go.Node, toNode: go.Node): void {
   const fromConnected = [...fromNode.findNodesConnected()];
   const toConnected = [...toNode.findNodesConnected()];
 
@@ -30,6 +67,29 @@ const validateLink = (fromNode: go.Node, toNode: go.Node) => {
     return;
   }
 
+  console.log(
+    "found a triangle with these nodes",
+    fromNode.key,
+    toNode.key,
+    commonParent.key
+  );
+
+  const commonShapes = (fromNode.data.partOfShapes as string[]).filter(
+    (shape) =>
+      toNode.data.partOfShapes.includes(shape) &&
+      commonParent.data.partOfShapes.includes(shape)
+  );
+
+  if (commonShapes.length === 0) {
+    console.log("No common shape found, wrong triangle input");
+    return;
+  }
+
+  const shapeIndex = commonShapes[0]; // only one shape possible
+
+  const shape = shapes[parseInt(shapeIndex)];
+  const color = palette[parseInt(shape.color)];
+
   const p1 = fromNode.location.copy();
   const p2 = toNode.location.copy();
   const p3 = commonParent.location.copy();
@@ -44,39 +104,14 @@ const validateLink = (fromNode: go.Node, toNode: go.Node) => {
 
   const tri = new go.Shape({
     geometry: geometry,
-    fill: "green",
+    fill: color,
   });
 
   myDiagram.add(new go.Node().add(tri));
-};
 
-var tool = new VertexLinkingTool(validateLink);
-myDiagram.toolManager.linkingTool = tool;
+  if (tri.part === null) {
+    return;
+  }
 
-myDiagram.nodeTemplate = new go.Node("Spot", { locationSpot: go.Spot.Center })
-  .bindTwoWay("location", "loc", go.Point.parse, go.Point.stringify)
-  .add(
-    new go.Shape("Circle", {
-      width: 40,
-      height: 40,
-      fill: "lightgray",
-      portId: "",
-      cursor: "pointer",
-      fromLinkable: true,
-      toLinkable: true,
-    }).bind("fill"),
-    new go.TextBlock().bind("text")
-  );
-
-myDiagram.linkTemplate = new go.Link()
-  .bindTwoWay("points", "points")
-  .add(new go.Shape({ strokeWidth: 1.5 }));
-
-myDiagram.allowMove = false;
-
-myDiagram.model = new go.GraphLinksModel([
-  // for each object in this Array, the Diagram creates a Node to represent it
-  { text: "2", loc: "0 0" },
-  { text: "2", loc: "0 300" },
-  { text: "2", loc: "300 300" },
-]);
+  tri.part.layerName = "Background";
+}
