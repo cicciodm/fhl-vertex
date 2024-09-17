@@ -9,7 +9,33 @@ const myDiagram = new go.Diagram("app", {
   "toolManager.mouseWheelBehavior": go.WheelMode.Zoom,
 });
 
-var tool = new VertexLinkingTool();
+const validateLink = (fromNode: go.Node, toNode: go.Node) => {
+  console.log("find common parent between", fromNode, toNode);
+  console.log(
+    "if found, we will draw a shape and remove the nodes and the links"
+  );
+
+  const p1 = fromNode.location.copy();
+  const p2 = toNode.location.copy();
+  const p3 = new go.Point(300, 300); // This should technically be the parent
+  console.log("Found these locations", p1, p2, p3);
+
+  const path = new go.PathFigure(p1.x, p1.y, true);
+  path.add(new go.PathSegment(go.SegmentType.Line, p2.x, p2.y));
+  path.add(new go.PathSegment(go.SegmentType.Line, p3.x, p3.y));
+  path.add(new go.PathSegment(go.SegmentType.Line, p1.x, p1.y));
+
+  const geometry = new go.Geometry().add(path);
+
+  const tri = new go.Shape({
+    geometry: geometry,
+    fill: "green",
+  });
+
+  myDiagram.add(new go.Node().add(tri));
+};
+
+var tool = new VertexLinkingTool(validateLink);
 myDiagram.toolManager.linkingTool = tool;
 
 myDiagram.nodeTemplate = new go.Node("Spot", { locationSpot: go.Spot.Center })

@@ -24,18 +24,19 @@ import go, { LinkingTool } from "gojs";
  * @category Tool Extension
  */
 export class VertexLinkingTool extends go.LinkingTool {
-  private _firstMouseDown: boolean;
-  private _horizontal: boolean;
+  private _validateLink: (fromNode: go.Node, toNode: go.Node) => void;
 
   /**
    * Constructs an PolylineLinkingTool, sets {@link portGravity} to 0, and sets the name for the tool.
    */
-  constructor(init?: Partial<LinkingTool>) {
+  constructor(
+    validateLink: (fromNode: go.Node, toNode: go.Node) => void,
+    init?: Partial<LinkingTool>
+  ) {
     super();
     this.portGravity = 0; // must click on a target port in order to complete the link
     this.name = "PolylineLinking";
-    this._firstMouseDown = false;
-    this._horizontal = false;
+    this._validateLink = validateLink;
     if (init) Object.assign(this, init);
     this.temporaryLink = new go.Link({
       layerName: "Tool",
@@ -67,8 +68,11 @@ export class VertexLinkingTool extends go.LinkingTool {
         );
       }
     }
+    const fromNode = this.originalFromNode as go.Node;
+    const toNode = targetPort?.part as go.Node;
 
     super.doMouseUp();
+    this._validateLink(fromNode, toNode);
   }
   //   if (!this.isActive) return;
   //   const target = this.findTargetPort(this.isForwards);
