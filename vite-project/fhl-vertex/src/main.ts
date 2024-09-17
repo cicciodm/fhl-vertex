@@ -11,13 +11,28 @@ const myDiagram = new go.Diagram("app", {
 
 const validateLink = (fromNode: go.Node, toNode: go.Node) => {
   console.log("find common parent between", fromNode, toNode);
+  const fromConnected = [...fromNode.findNodesConnected()];
+  const toConnected = [...toNode.findNodesConnected()];
+
   console.log(
-    "if found, we will draw a shape and remove the nodes and the links"
+    "fromConnected",
+    [...fromConnected].map((n) => n.key)
   );
+  console.log(
+    "toConnected",
+    [...toConnected].map((n) => n.key)
+  );
+
+  const commonParent = fromConnected.find((n) => toConnected.includes(n));
+
+  if (!commonParent) {
+    console.log("No common parent found");
+    return;
+  }
 
   const p1 = fromNode.location.copy();
   const p2 = toNode.location.copy();
-  const p3 = new go.Point(300, 300); // This should technically be the parent
+  const p3 = commonParent.location.copy();
   console.log("Found these locations", p1, p2, p3);
 
   const path = new go.PathFigure(p1.x, p1.y, true);
@@ -61,7 +76,7 @@ myDiagram.allowMove = false;
 
 myDiagram.model = new go.GraphLinksModel([
   // for each object in this Array, the Diagram creates a Node to represent it
-  { text: "1", loc: "0 0" },
+  { text: "2", loc: "0 0" },
   { text: "2", loc: "0 300" },
-  { text: "3", loc: "300 300" },
+  { text: "2", loc: "300 300" },
 ]);
