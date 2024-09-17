@@ -1,6 +1,6 @@
 import * as go from "gojs";
 import { VertexLinkingTool } from "./linkingTool";
-import { level } from "../levelData/1";
+import { level } from "../levelData/big";
 
 // You can specify options in the Diagram's second argument
 // These options not only include Diagram properties, but sub-properties, too.
@@ -19,8 +19,8 @@ myDiagram.nodeTemplate = new go.Node("Spot", { locationSpot: go.Spot.Center })
   .bindTwoWay("location", "loc", go.Point.parse, go.Point.stringify)
   .add(
     new go.Shape("Circle", {
-      width: 40,
-      height: 40,
+      width: 20,
+      height: 20,
       portId: "",
       fill: "lightgrey",
       cursor: "pointer",
