@@ -38,9 +38,32 @@ export class VertexLinkingTool extends go.LinkingTool {
     this.name = "PolylineLinking";
     this._validateLink = validateLink;
     if (init) Object.assign(this, init);
+
     this.temporaryLink = new go.Link({
       layerName: "Tool",
-    }).add(new go.Shape({ stroke: "black", strokeWidth: 2 }));
+    }).add(new go.Shape({ stroke: "black", strokeWidth: 1 }));
+
+    this.temporaryFromNode = new go.Node().add(
+      new go.Shape("Circle", {
+        width: 46,
+        height: 46,
+        stroke: "red",
+        portId: "",
+        fill: "transparent",
+        strokeWidth: 2,
+      })
+    );
+
+    this.temporaryToNode = new go.Node().add(
+      new go.Shape("Circle", {
+        width: 46,
+        height: 46,
+        stroke: "red",
+        portId: "",
+        fill: "transparent",
+        strokeWidth: 2,
+      })
+    );
   }
 
   doMouseUp() {
@@ -50,9 +73,6 @@ export class VertexLinkingTool extends go.LinkingTool {
     if (targetPort !== null && source !== null) {
       const target = targetPort.part;
       if (target !== null) {
-        console.log("$$$ target.part", target.data);
-        console.log("$$$ source", source.data);
-
         let currentCount = parseInt(target.data.text);
         target.diagram?.model.setDataProperty(
           target.data,
@@ -67,119 +87,14 @@ export class VertexLinkingTool extends go.LinkingTool {
           currentCount - 1
         );
       }
-    }
-    const fromNode = this.originalFromNode as go.Node;
-    const toNode = targetPort?.part as go.Node;
 
-    super.doMouseUp();
-    this._validateLink(fromNode, toNode);
+      const fromNode = this.originalFromNode as go.Node;
+      const toNode = targetPort?.part as go.Node;
+
+      super.doMouseUp();
+      this._validateLink(fromNode, toNode);
+    } else {
+      super.doMouseUp();
+    }
   }
-  //   if (!this.isActive) return;
-  //   const target = this.findTargetPort(this.isForwards);
-  //   if (target !== null) {
-  //     if (this._firstMouseDown) {
-  //       super.doMouseUp();
-  //     } else {
-  //       let pts;
-  //       this.removeLastPoint(); // remove temporary point
-  //       const spot = this.isForwards ? target.toSpot : target.fromSpot;
-  //       if (spot.equals(go.Spot.None)) {
-  //         const pt = this.temporaryLink.getLinkPointFromPoint(
-  //           target.part as go.Node,
-  //           target,
-  //           target.getDocumentPoint(go.Spot.Center),
-  //           this.temporaryLink.points.elt(this.temporaryLink.points.length - 2),
-  //           !this.isForwards
-  //         );
-  //         this.moveLastPoint(pt);
-  //         pts = this.temporaryLink.points.copy();
-  //         if (this.temporaryLink.isOrthogonal) {
-  //           pts.insertAt(pts.length - 2, pts.elt(pts.length - 2));
-  //         }
-  //       } else {
-  //         // copy the route of saved points, because we're about to recompute it
-  //         pts = this.temporaryLink.points.copy();
-  //         // terminate the link in the expected manner by letting the
-  //         // temporary link connect with the temporary node/port and letting the
-  //         // normal route computation take place
-  //         if (this.isForwards) {
-  //           this.copyPortProperties(
-  //             target.part as go.Node,
-  //             target,
-  //             this.temporaryToNode,
-  //             this.temporaryToPort,
-  //             true
-  //           );
-  //           this.temporaryLink.toNode = target.part as go.Node;
-  //         } else {
-  //           this.copyPortProperties(
-  //             target.part as go.Node,
-  //             target,
-  //             this.temporaryFromNode,
-  //             this.temporaryFromPort,
-  //             false
-  //           );
-  //           this.temporaryLink.fromNode = target.part as go.Node;
-  //         }
-  //         this.temporaryLink.updateRoute();
-  //         // now copy the final one or two points of the temporary link's route
-  //         // into the route built up in the PTS List.
-  //         const natpts = this.temporaryLink.points;
-  //         const numnatpts = natpts.length;
-  //         if (numnatpts >= 2) {
-  //           if (numnatpts >= 3) {
-  //             const penult = natpts.elt(numnatpts - 2);
-  //             pts.insertAt(pts.length - 1, penult);
-  //             if (this.temporaryLink.isOrthogonal) {
-  //               pts.insertAt(pts.length - 1, penult);
-  //             }
-  //           }
-  //           const ult = natpts.elt(numnatpts - 1);
-  //           pts.setElt(pts.length - 1, ult);
-  //         }
-  //       }
-  //       // save desired route in temporary link;
-  //       // insertLink will copy the route into the new real Link
-  //       this.temporaryLink.points = pts;
-  //       super.doMouseUp();
-  //     }
-  //   }
-  // }
-  // /**
-  //  * This method overrides the standard link creation method by additionally
-  //  * replacing the default link route with the custom one laid out by the user.
-  //  */
-  // insertLink(
-  //   fromnode: go.Node | null,
-  //   fromport: go.GraphObject | null,
-  //   tonode: go.Node | null,
-  //   toport: go.GraphObject | null
-  // ) {
-  //   const link = super.insertLink(fromnode, fromport, tonode, toport);
-  //   if (link !== null && !this._firstMouseDown) {
-  //     // ignore natural route by replacing with route accumulated by this tool
-  //     link.points = this.temporaryLink.points;
-  //   }
-  //   return link;
-  // }
-  // /**
-  //  * This supports the "Z" command during this tool's operation to remove the last added point of the route.
-  //  * Type ESCAPE to completely cancel the operation of the tool.
-  //  */
-  // doKeyDown() {
-  //   if (!this.isActive) return;
-  //   const e = this.diagram.lastInput;
-  //   if (
-  //     e.commandKey === "z" &&
-  //     this.temporaryLink.points.length >
-  //       (this.temporaryLink.isOrthogonal ? 4 : 3)
-  //   ) {
-  //     // undo
-  //     // remove a point, and then treat the last one as a temporary one
-  //     this.removeLastPoint();
-  //     this.moveLastPoint(e.documentPoint);
-  //   } else {
-  //     super.doKeyDown();
-  //   }
-  // }
 }

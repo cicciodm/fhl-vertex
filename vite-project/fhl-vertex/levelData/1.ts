@@ -6,8 +6,8 @@ export const level = {
   ],
   vertices: {
     "0": { coordinates: [0, 0], shapes: ["0", "1"] },
-    "1": { coordinates: [0, 300], shapes: ["0"] },
-    "2": { coordinates: [300, 300], shapes: ["0", "1"] },
-    "3": { coordinates: [300, 0], shapes: ["1"] },
+    "1": { coordinates: [0, 150], shapes: ["0"] },
+    "2": { coordinates: [150, 150], shapes: ["0", "1"] },
+    "3": { coordinates: [150, 0], shapes: ["1"] },
   },
 };
