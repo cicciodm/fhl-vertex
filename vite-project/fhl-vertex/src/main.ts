@@ -1,6 +1,10 @@
 import * as go from "gojs";
 import { VertexLinkingTool } from "./linkingTool";
-import { level } from "../levelData/diamond";
+import { level } from "../levelData/generated";
+
+// Known bugs:
+// You can go under 0 for number of edges
+// Only one triangle at the time is ever created
 
 // You can specify options in the Diagram's second argument
 // These options not only include Diagram properties, but sub-properties, too.
@@ -60,7 +64,7 @@ myDiagram.nodeTemplate = new go.Node("Spot", {
       toLinkable: true,
       portId: "",
       doubleClick: clearAllLinks,
-    }),
+    }).bind("fromMaxLinks", "maxLinks"),
     new go.TextBlock({ cursor: "pointer" }).bind("text")
   );
 
@@ -93,12 +97,96 @@ const transformedVertices = Object.entries(vertices).map(([key, value]) => ({
   partOfShapes: value.shapes,
   shapesConfirmedCount: 0,
   text: getNumberOfEdges(value as Vertex) + "",
+  maxLinks: getNumberOfEdges(value as Vertex),
   loc: value.coordinates.join(" "),
 }));
 
-console.log("transformedVertices", transformedVertices);
+const solveButton = new go.Node("Vertical", {
+  locationSpot: go.Spot.Center,
+  location: new go.Point(-100, -100),
+}).add(
+  new go.TextBlock("Solve Puzzle", { margin: 2 }),
+  new go.Panel("Vertical", { margin: 3 }).add(
+    go.GraphObject.build("Button", {
+      margin: 2,
+      click: solvePuzzle,
+      height: 35,
+      width: 100,
+    })
+  )
+);
 
 myDiagram.model = new go.GraphLinksModel(transformedVertices);
+myDiagram.add(solveButton);
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function solvePuzzle(): Promise<void> {
+  let index = 0;
+  while (index < shapes.length) {
+    myDiagram.startTransaction("solve puzzle");
+
+    const shape = shapes[index++];
+
+    const color = palette[parseInt(shape.color)];
+    const vIndexes = shape.vertices;
+
+    const matchingNodes =
+      vIndexes.map((vIndex) =>
+        [...myDiagram.nodes].find((n) => n.key === vIndex + "")
+      ) || [];
+
+    if (
+      matchingNodes.length !== 3 ||
+      matchingNodes.every((n) => n === undefined)
+    ) {
+      console.error("Could not find all nodes for shape", shape);
+      continue;
+    }
+
+    const p1 = matchingNodes[0]?.location.copy();
+    const p2 = matchingNodes[1]?.location.copy();
+    const p3 = matchingNodes[2]?.location.copy();
+
+    if (!p1 || !p2 || !p3) {
+      console.error("Could not find all locations for shape", shape);
+      continue;
+    }
+
+    const path = new go.PathFigure(p1.x, p1.y, true);
+    path.add(new go.PathSegment(go.SegmentType.Line, p2.x, p2.y));
+    path.add(new go.PathSegment(go.SegmentType.Line, p3.x, p3.y));
+    path.add(new go.PathSegment(go.SegmentType.Line, p1.x, p1.y));
+
+    const geometry = new go.Geometry().add(path);
+
+    const tri = new go.Shape({
+      geometry: geometry,
+      fill: color,
+      stroke: color,
+    });
+
+    myDiagram.add(new go.Node({ locationSpot: go.Spot.Center }).add(tri));
+
+    if (tri.part === null) {
+      continue;
+    }
+    tri.part.layerName = "Background";
+    myDiagram.commitTransaction("solve puzzle");
+
+    await delay(50);
+  }
+
+  myDiagram.startTransaction("remove all nodes");
+  myDiagram.nodes.each((node) => {
+    if (node.data?.key !== undefined) {
+      myDiagram.remove(node);
+    }
+  });
+  myDiagram.commitTransaction("remove all nodes");
+}
 
 function validateLink(fromNode: go.Node, toNode: go.Node): void {
   const fromConnected = [...fromNode.findNodesConnected()];
@@ -155,6 +243,22 @@ function validateLink(fromNode: go.Node, toNode: go.Node): void {
   toNode.data.shapesConfirmedCount++;
   commonParent.data.shapesConfirmedCount++;
 
+  // set a property called confirmed on the links between triangles, so they are not deleted
+  let links = fromNode.findLinksBetween(toNode);
+  links.each((link) => {
+    myDiagram.model.setDataProperty(link.data, "confirmed", true);
+  });
+
+  links = fromNode.findLinksBetween(commonParent);
+  links.each((link) => {
+    myDiagram.model.setDataProperty(link.data, "confirmed", true);
+  });
+
+  links = toNode.findLinksBetween(commonParent);
+  links.each((link) => {
+    myDiagram.model.setDataProperty(link.data, "confirmed", true);
+  });
+
   if (
     fromNode.data.shapesConfirmedCount === fromNode.data.partOfShapes.length
   ) {
@@ -175,9 +279,13 @@ function validateLink(fromNode: go.Node, toNode: go.Node): void {
 }
 
 function clearAllLinks(_e: go.InputEvent | null, obj: go.GraphObject): void {
+  myDiagram.startTransaction("clear all links");
   const node = obj.part as go.Node;
   const connectedLinks = [...node.findLinksConnected()];
   connectedLinks.forEach((link) => {
+    if (link.data.confirmed) {
+      return;
+    }
     const toNode = link.toNode as go.Node;
     const toCount = parseInt(toNode.data.text);
     myDiagram.model.setDataProperty(toNode.data, "text", toCount + 1);
@@ -188,6 +296,7 @@ function clearAllLinks(_e: go.InputEvent | null, obj: go.GraphObject): void {
 
     myDiagram.remove(link);
   });
+  myDiagram.commitTransaction("clear all links");
 }
 
 function getNumberOfEdges(vertex: Vertex | string): number {
