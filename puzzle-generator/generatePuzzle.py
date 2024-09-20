@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 
-filename = "./images/pineapple.png"
+filename = "./images/gptapple.png"
 
 def show_image(image, title='Image'):
     plt.figure(figsize=(8, 8))
@@ -84,17 +84,7 @@ mask2 = np.where((mask == 2) | (mask == 0), 0, 1).astype('uint8')
 # Apply the mask to the original image to extract the foreground
 result = image * mask2[:, :, np.newaxis]
 
-plt.subplot(1, 2, 1)
-plt.title('Original Image')
-plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-
-plt.subplot(1, 2, 2)
-plt.title('Foreground (Background Removed)')
-plt.imshow(cv2.cvtColor(result, cv2.COLOR_BGR2RGB))
-
-plt.show()
-
-gray = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
+gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
 # Apply GaussianBlur to reduce noise
 gray = cv2.GaussianBlur(gray, (5, 5), 0)
@@ -168,7 +158,7 @@ result = {
 result_json = json.dumps(result)
 
 # Create the file and write the content
-file_path = '../vite-project/fhl-vertex/levelData/generated.ts'
+file_path = '../fhl-vertex/levelData/generated.ts'
 
 # Create the directory if it doesn't exist
 os.makedirs(os.path.dirname(file_path), exist_ok=True)
