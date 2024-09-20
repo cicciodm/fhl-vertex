@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 
-filename = "./images/apple.png"
+filename = "./images/pineapple.png"
 
 def show_image(image, title='Image'):
     plt.figure(figsize=(8, 8))
@@ -65,7 +65,36 @@ def getClosestVertex(vertex, vertex_list):
 # Load the image
 image = cv2.imread(filename)
 
-gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+mask = np.zeros(image.shape[:2], np.uint8)
+
+# Define a rectangle around the object (x, y, width, height)
+rect = (50, 50, image.shape[1] - 100, image.shape[0] - 100)
+
+# Create temporary arrays used by the algorithm (initialized to 0)
+bgd_model = np.zeros((1, 65), np.float64)  # Background model
+fgd_model = np.zeros((1, 65), np.float64)  # Foreground model
+
+# Apply the GrabCut algorithm
+cv2.grabCut(image, mask, rect, bgd_model, fgd_model, 5, cv2.GC_INIT_WITH_RECT)
+
+# Modify the mask to segment the background from the object
+# 0 and 2 are background, 1 and 3 are foreground
+mask2 = np.where((mask == 2) | (mask == 0), 0, 1).astype('uint8')
+
+# Apply the mask to the original image to extract the foreground
+result = image * mask2[:, :, np.newaxis]
+
+plt.subplot(1, 2, 1)
+plt.title('Original Image')
+plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+
+plt.subplot(1, 2, 2)
+plt.title('Foreground (Background Removed)')
+plt.imshow(cv2.cvtColor(result, cv2.COLOR_BGR2RGB))
+
+plt.show()
+
+gray = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
 
 # Apply GaussianBlur to reduce noise
 gray = cv2.GaussianBlur(gray, (5, 5), 0)
